@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GTA 42</title>
+    <title>GTA 6</title>
     <style>
         body {
             margin: 0;
@@ -17,10 +17,11 @@
             height: 100%;
             background: linear-gradient(45deg, #1a1a1a, #4a4a4a);
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             justify-content: center;
             z-index: 2;
+            overflow: hidden;
         }
 
         .menu-container {
@@ -31,7 +32,13 @@
             text-align: center;
             border: 2px solid #e74c3c;
             max-width: 600px;
-            margin: 0 auto;
+            margin: 0 20px;
+            animation: float 3s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .title {
@@ -41,6 +48,12 @@
             background: linear-gradient(45deg, #e74c3c, #3498db);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            0% { text-shadow: 0 0 10px #e74c3c, 0 0 20px #e74c3c, 0 0 30px #e74c3c; }
+            100% { text-shadow: 0 0 20px #3498db, 0 0 40px #3498db, 0 0 60px #3498db; }
         }
 
         .difficulty, .music-buttons {
@@ -279,6 +292,7 @@
                 <label><input type="radio" name="difficulty" value="hard"> Киборг</label>
             </div>
             <div class="music-buttons">
+                <h3>Выбор музыки:</h3>
                 <button class="music-button active" onclick="changeMusic('gta.mp3', this)">Нига</button>
                 <button class="music-button" onclick="changeMusic('mamont.mp3', this)">Мамонт</button>
                 <button class="music-button" onclick="changeMusic('san.mp3', this)">Сан Андреас</button>
@@ -341,12 +355,12 @@
         let recordKillsCount = 0;
         let recordBossesCount = 0;
         let bossDefeated = false;
-        let saw = null;
         let godMode = false;
         let lastTime = 0;
         let isPaused = false;
         let rgbBossDefeated = false;
         let cheatToggle = false;
+        let superShotActive = false; // Новая переменная для суперспособности
 
         const cheatActiveElement = document.createElement('div');
         cheatActiveElement.className = 'cheat-active';
@@ -405,6 +419,7 @@
             isPaused = !isPaused;
             if(isPaused) {
                 pauseOverlay.style.display = 'flex';
+                pauseText.innerHTML = `ПАУЗА<br>Уровень сложности: ${difficulty}`;
                 cancelAnimationFrame(animationFrame);
                 backgroundMusic.pause();
             } else {
@@ -463,9 +478,9 @@
             tripleShotActive = false;
             rgbBoss = null;
             bossDefeated = false;
-            saw = null;
             godMode = false;
             rgbBossDefeated = false;
+            superShotActive = false; // Сбрасываем суперспособность
             
             killCounter.innerHTML = `Убийств: ${killCount}<br>Боссов: ${bossesKilled}`;
             bossHealthDiv.style.display = 'none';
@@ -502,8 +517,8 @@
         }
 
         function spawnRGBBoss() {
-            if(rgbBossDefeated) return;
-            
+            if (rgbBossDefeated) return;
+
             rgbBoss = {
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
@@ -526,11 +541,11 @@
             });
         }
 
-        function spawnSawItem() {
+        function spawnSuperShotItem() {
             items.push({
                 x: Math.random() * (canvas.width - 30),
                 y: Math.random() * (canvas.height - 30),
-                type: 'saw',
+                type: 'superShot',
                 blink: true
             });
         }
@@ -554,22 +569,19 @@
             items.forEach((item, index) => {
                 const dx = item.x - player.x;
                 const dy = item.y - player.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                
-                if(distance < player.pickupRadius) {
-                    if(item.type === 'health') {
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < player.pickupRadius) {
+                    if (item.type === 'health') {
                         player.health = Math.min(100, player.health + (difficulty === 'easy' ? 60 : 30));
                         healthSpan.textContent = player.health;
-                    }
-                    else if(item.type === 'ammo') {
+                    } else if (item.type === 'ammo') {
                         player.ammo += (difficulty === 'easy' ? 30 : 15);
                         ammoSpan.textContent = player.ammo;
-                    }
-                    else if(item.type === 'tripleShot') {
+                    } else if (item.type === 'tripleShot') {
                         tripleShotActive = true;
-                    }
-                    else if(item.type === 'saw') {
-                        activateSaw();
+                    } else if (item.type === 'superShot') {
+                        superShotActive = true; // Активируем суперспособность
                     }
                     items.splice(index, 1);
                     spawnItem();
@@ -577,75 +589,82 @@
             });
         }
 
-        function activateSaw() {
-            saw = {
-                angle: 0,
-                length: player.size * 2,
-                rotationSpeed: Math.PI * 1.5 // Увеличиваем скорость вращения
-            };
+        function activateSuperShot() {
+            if (superShotActive && Math.random() < 0.11) { // 11% шанс
+                for (let i = 0; i < 20; i++) {
+                    const angle = (i / 20) * Math.PI * 2;
+                    bullets.push({
+                        x: player.x + player.size / 2,
+                        y: player.y + player.size / 2,
+                        speedX: Math.cos(angle) * 10,
+                        speedY: Math.sin(angle) * 10,
+                        size: 5
+                    });
+                }
+            }
         }
 
         function drawPlayer() {
             ctx.save();
-            ctx.translate(player.x + player.size/2, player.y + player.size/2);
+            ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
             ctx.rotate(player.angle);
-            
+
             ctx.fillStyle = '#3498db';
             ctx.beginPath();
-            ctx.arc(0, 0, player.size/2, 0, Math.PI * 2);
+            ctx.arc(0, 0, player.size / 2, 0, Math.PI * 2);
             ctx.fill();
-            
+
             ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(player.size/4, -3, player.size/2, 6);
-            
+            ctx.fillRect(player.size / 4, -3, player.size / 2, 6);
+
             ctx.restore();
         }
 
         function drawEnemy(enemy) {
             ctx.save();
-            ctx.translate(enemy.x + enemy.size/2, enemy.y + enemy.size/2);
+            ctx.translate(enemy.x + enemy.size / 2, enemy.y + enemy.size / 2);
             ctx.rotate(enemy.angle);
-            
+
             ctx.fillStyle = '#e74c3c';
             ctx.beginPath();
-            ctx.arc(0, 0, enemy.size/2, 0, Math.PI * 2);
+            ctx.arc(0, 0, enemy.size / 2, 0, Math.PI * 2);
             ctx.fill();
-            
+
             ctx.fillStyle = '#c0392b';
             ctx.beginPath();
-            ctx.moveTo(enemy.size/2, 0);
-            ctx.lineTo(-enemy.size/4, -enemy.size/4);
-            ctx.lineTo(-enemy.size/4, enemy.size/4);
+            ctx.moveTo(enemy.size / 2, 0);
+            ctx.lineTo(-enemy.size / 4, -enemy.size / 4);
+            ctx.lineTo(-enemy.size / 4, enemy.size / 4);
             ctx.closePath();
             ctx.fill();
-            
+
             ctx.restore();
         }
 
         function drawBoss() {
             ctx.save();
-            ctx.translate(boss.x + boss.size/2, boss.y + boss.size/2);
+            ctx.translate(boss.x + boss.size / 2, boss.y + boss.size / 2);
             ctx.rotate(boss.angle);
-            
+
             ctx.fillStyle = '#ff0000';
             ctx.beginPath();
-            ctx.moveTo(0, -boss.size/2);
-            ctx.lineTo(boss.size/2, boss.size/2);
-            ctx.lineTo(-boss.size/2, boss.size/2);
+            ctx.moveTo(0, -boss.size / 2);
+            ctx.lineTo(boss.size / 2, boss.size / 2);
+            ctx.lineTo(-boss.size / 2, boss.size / 2);
             ctx.closePath();
             ctx.fill();
-            
+
             ctx.restore();
         }
 
         function drawRGBBoss() {
             ctx.save();
-            ctx.translate(rgbBoss.x + rgbBoss.size/2, rgbBoss.y + rgbBoss.size/2);
+            ctx.translate(rgbBoss.x + rgbBoss.size / 2, rgbBoss.y + rgbBoss.size / 2);
             ctx.rotate(rgbBoss.angle);
-            
+
             ctx.fillStyle = '#ff00ff';
-            ctx.fillRect(-rgbBoss.size/2, -rgbBoss.size/2, rgbBoss.size, rgbBoss.size);
-            
+            ctx.fillRect(-rgbBoss.size / 2, -rgbBoss.size / 2, rgbBoss.size, rgbBoss.size);
+
             ctx.restore();
         }
 
@@ -653,17 +672,17 @@
             ctx.save();
             ctx.translate(item.x + 15, item.y + 15);
             ctx.fillStyle = '#9b59b6';
-            if(item.blink) {
+            if (item.blink) {
                 ctx.globalAlpha = Math.sin(Date.now() / 200) * 0.5 + 0.5;
             }
             ctx.fillRect(-15, -15, 30, 30);
             ctx.restore();
         }
 
-        function drawSawItem(item) {
+        function drawSuperShotItem(item) {
             ctx.save();
             ctx.translate(item.x + 15, item.y + 15);
-            
+
             const gradient = ctx.createLinearGradient(-15, -15, 30, 30);
             gradient.addColorStop(0, '#ff0000');
             gradient.addColorStop(0.2, '#ff9900');
@@ -671,13 +690,13 @@
             gradient.addColorStop(0.6, '#33ff00');
             gradient.addColorStop(0.8, '#0099ff');
             gradient.addColorStop(1, '#6633ff');
-            
+
             ctx.fillStyle = gradient;
-            
-            if(item.blink) {
+
+            if (item.blink) {
                 ctx.globalAlpha = Math.sin(Date.now() / 200) * 0.5 + 0.5;
             }
-            
+
             ctx.beginPath();
             ctx.moveTo(0, -15);
             ctx.lineTo(30, 0);
@@ -688,7 +707,7 @@
         }
 
         function gameLoop() {
-            if(isPaused) return;
+            if (isPaused) return;
 
             const currentTime = performance.now();
             const deltaTime = currentTime - lastTime;
@@ -696,46 +715,46 @@
 
             const newX = player.x + (keys.d ? player.speed : 0) - (keys.a ? player.speed : 0);
             const newY = player.y + (keys.s ? player.speed : 0) - (keys.w ? player.speed : 0);
-            
+
             player.x = Math.max(0, Math.min(canvas.width - player.size, newX));
             player.y = Math.max(0, Math.min(canvas.height - player.size, newY));
 
-            const dx = mouse.x - (player.x + player.size/2);
-            const dy = mouse.y - (player.y + player.size/2);
+            const dx = mouse.x - (player.x + player.size / 2);
+            const dy = mouse.y - (player.y + player.size / 2);
             player.angle = Math.atan2(dy, dx);
 
             bullets.forEach((bullet, index) => {
                 bullet.x += bullet.speedX;
                 bullet.y += bullet.speedY;
-                
-                if(bullet.x < 0 || bullet.x > canvas.width || 
-                   bullet.y < 0 || bullet.y > canvas.height) {
+
+                if (bullet.x < 0 || bullet.x > canvas.width ||
+                    bullet.y < 0 || bullet.y > canvas.height) {
                     bullets.splice(index, 1);
                     return;
                 }
-                
+
                 enemies.forEach((enemy, enemyIndex) => {
-                    if(checkCollision(bullet, enemy)) {
+                    if (checkCollision(bullet, enemy)) {
                         enemies.splice(enemyIndex, 1);
                         bullets.splice(index, 1);
-                        
+
                         killCount++;
                         killCounter.innerHTML = `Убийств: ${killCount}<br>Боссов: ${bossesKilled}`;
-                        
-                        if(killCount % (difficulty === 'easy' ? 40 : difficulty === 'normal' ? 25 : 20) === 0) {
+
+                        if (killCount % (difficulty === 'easy' ? 40 : difficulty === 'normal' ? 25 : 20) === 0) {
                             spawnEnemy();
                         }
-                        
+
                         spawnEnemy();
                     }
                 });
 
-                if(boss && checkCollision(bullet, boss)) {
+                if (boss && checkCollision(bullet, boss)) {
                     bullets.splice(index, 1);
                     boss.health--;
                     bossHpSpan.textContent = boss.health;
-                    
-                    if(boss.health <= 0) {
+
+                    if (boss.health <= 0) {
                         bossesKilled++;
                         boss = null;
                         bossSpawned = false;
@@ -746,18 +765,18 @@
                     }
                 }
 
-                if(rgbBoss && checkCollision(bullet, rgbBoss)) {
+                if (rgbBoss && checkCollision(bullet, rgbBoss)) {
                     bullets.splice(index, 1);
                     rgbBoss.health--;
                     rbossHpSpan.textContent = rgbBoss.health;
-                    
-                    if(rgbBoss.health <= 0) {
+
+                    if (rgbBoss.health <= 0) {
                         bossesKilled++;
                         rgbBossDefeated = true;
                         rgbBoss = null;
                         rbossHealthDiv.style.display = 'none';
                         killCounter.innerHTML = `Убийств: ${killCount}<br>Боссов: ${bossesKilled}`;
-                        spawnSawItem();
+                        spawnSuperShotItem(); // Спавним суперспособность после убийства RGB босса
                     }
                 }
             });
@@ -765,54 +784,54 @@
             enemies.forEach(enemy => {
                 const dx = player.x - enemy.x;
                 const dy = player.y - enemy.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                
-                enemy.angle = Math.atan2(dy, dx);
-                enemy.x += (dx/distance) * enemy.speed;
-                enemy.y += (dy/distance) * enemy.speed;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if(checkCollision(player, enemy)) {
-                    if(!godMode) player.health -= 0.5;
+                enemy.angle = Math.atan2(dy, dx);
+                enemy.x += (dx / distance) * enemy.speed;
+                enemy.y += (dy / distance) * enemy.speed;
+
+                if (checkCollision(player, enemy)) {
+                    if (!godMode) player.health -= 0.5;
                     healthSpan.textContent = Math.floor(player.health);
                 }
             });
 
-            if(killCount >= 50 && !boss && !bossSpawned && !bossDefeated) {
+            if (killCount >= 50 && !boss && !bossSpawned && !bossDefeated) {
                 spawnBoss();
             }
 
-            if(killCount >= 250 && !rgbBoss && !rgbBossDefeated) {
+            if (killCount >= 250 && !rgbBoss && !rgbBossDefeated) {
                 spawnRGBBoss();
             }
 
-            if(boss) {
+            if (boss) {
                 const dx = player.x - boss.x;
                 const dy = player.y - boss.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                
-                boss.angle = Math.atan2(dy, dx);
-                boss.x += (dx/distance) * boss.speed;
-                boss.y += (dy/distance) * boss.speed;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if(checkCollision(player, boss)) {
-                    if(!godMode) player.health -= 1.5;
+                boss.angle = Math.atan2(dy, dx);
+                boss.x += (dx / distance) * boss.speed;
+                boss.y += (dy / distance) * boss.speed;
+
+                if (checkCollision(player, boss)) {
+                    if (!godMode) player.health -= 1.5;
                     healthSpan.textContent = Math.floor(player.health);
                 }
             }
 
-            if(rgbBoss) {
+            if (rgbBoss) {
                 const dx = player.x - rgbBoss.x;
                 const dy = player.y - rgbBoss.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                
-                rgbBoss.angle = Math.atan2(dy, dx);
-                rgbBoss.x += (dx/distance) * rgbBoss.speed;
-                rgbBoss.y += (dy/distance) * rgbBoss.speed;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-                if(Date.now() - rgbBoss.lastShot > 4000) {
+                rgbBoss.angle = Math.atan2(dy, dx);
+                rgbBoss.x += (dx / distance) * rgbBoss.speed;
+                rgbBoss.y += (dy / distance) * rgbBoss.speed;
+
+                if (Date.now() - rgbBoss.lastShot > 4000) {
                     bullets.push({
-                        x: rgbBoss.x + rgbBoss.size/2,
-                        y: rgbBoss.y + rgbBoss.size/2,
+                        x: rgbBoss.x + rgbBoss.size / 2,
+                        y: rgbBoss.y + rgbBoss.size / 2,
                         speedX: Math.cos(rgbBoss.angle) * 7,
                         speedY: Math.sin(rgbBoss.angle) * 7,
                         size: 8,
@@ -822,84 +841,67 @@
                     rgbBoss.lastShot = Date.now();
                 }
 
-                if(checkCollision(player, rgbBoss)) {
-                    if(!godMode) player.health -= 2;
+                if (checkCollision(player, rgbBoss)) {
+                    if (!godMode) player.health -= 2;
                     healthSpan.textContent = Math.floor(player.health);
                 }
             }
 
             bullets.forEach((bullet, index) => {
-                if(bullet.isBossBullet && checkCollision(bullet, player)) {
-                    if(!godMode) player.health -= bullet.damage;
+                if (bullet.isBossBullet && checkCollision(bullet, player)) {
+                    if (!godMode) player.health -= bullet.damage;
                     healthSpan.textContent = Math.floor(player.health);
                     bullets.splice(index, 1);
                 }
             });
 
-            if(saw) {
-                saw.angle += saw.rotationSpeed * (deltaTime / 1000);
-                if(saw.angle > Math.PI * 2) saw.angle -= Math.PI * 2;
-
-                enemies.forEach((enemy, index) => {
-                    const sawX = player.x + player.size/2 + Math.cos(saw.angle) * saw.length;
-                    const sawY = player.y + player.size/2 + Math.sin(saw.angle) * saw.length;
-                    
-                    if(checkCollision({x: sawX, y: sawY, size: 10}, enemy)) {
-                        enemies.splice(index, 1);
-                        killCount++;
-                        killCounter.innerHTML = `Убийств: ${killCount}<br>Боссов: ${bossesKilled}`;
-                        spawnEnemy(); // Спавним нового врага после убийства
-                    }
-                });
-            }
-
-            if(keys.w && keys.f && !cheatToggle) {
+            if (keys.w && keys.f && !cheatToggle) {
                 cheatToggle = true;
                 godMode = !godMode;
                 cheatActiveElement.style.display = godMode ? 'block' : 'none';
-                if(godMode) {
+                if (godMode) {
                     player.health = 100;
                     healthSpan.textContent = player.health;
                 }
             }
 
-            if(player.ammo < 10) {
+            if (player.ammo < 10) {
                 ammoSpan.classList.add('blink');
             } else {
                 ammoSpan.classList.remove('blink');
             }
 
-            if(player.health < 20) {
+            if (player.health < 20) {
                 healthSpan.classList.add('pulse');
             } else {
                 healthSpan.classList.remove('pulse');
             }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
             items.forEach(item => {
-                if(item.type === 'tripleShot') {
+                if (item.type === 'tripleShot') {
                     drawTripleShotItem(item);
-                } else if(item.type === 'saw') {
-                    drawSawItem(item);
+                } else if (item.type === 'superShot') {
+                    drawSuperShotItem(item);
                 } else {
                     ctx.fillStyle = item.type === 'health' ? '#2ecc71' : '#f1c40f';
                     ctx.beginPath();
-                    ctx.arc(item.x + 15, item.y + 15, 15, 0, Math.PI*2);
+                    ctx.arc(item.x + 15, item.y + 15, 15, 0, Math.PI * 2);
                     ctx.fill();
                 }
             });
 
             drawPlayer();
             enemies.forEach(drawEnemy);
-            if(boss) drawBoss();
-            if(rgbBoss) drawRGBBoss();
-            
+            if (boss) drawBoss();
+            if (rgbBoss) drawRGBBoss();
+
             bullets.forEach(bullet => {
-                if(bullet.isBossBullet) {
+                if (bullet.isBossBullet) {
                     ctx.fillStyle = '#ff0000';
                     ctx.beginPath();
-                    ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI*2);
+                    ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
                     ctx.fillStyle = 'black';
@@ -907,38 +909,31 @@
                 }
             });
 
-            if(saw) {
-                ctx.save();
-                ctx.translate(player.x + player.size/2, player.y + player.size/2);
-                ctx.rotate(saw.angle);
-                
-                ctx.fillStyle = '#000';
-                ctx.fillRect(30, -5, saw.length, 10);
-                
-                ctx.restore();
-            }
-
-            if(difficulty === 'hard') {
+            if (difficulty === 'hard') {
                 enemies.forEach(enemy => {
-                    const nearbyEnemies = enemies.filter(e => 
-                        e !== enemy && 
-                        Math.abs(e.x - enemy.x) < 100 && 
+                    const nearbyEnemies = enemies.filter(e =>
+                        e !== enemy &&
+                        Math.abs(e.x - enemy.x) < 100 &&
                         Math.abs(e.y - enemy.y) < 100
                     );
-                    
-                    if(nearbyEnemies.length > 2) {
+
+                    if (nearbyEnemies.length > 2) {
                         const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                        enemy.x += Math.cos(angle + Math.PI/4) * enemy.speed;
-                        enemy.y += Math.sin(angle + Math.PI/4) * enemy.speed;
+                        enemy.x += Math.cos(angle + Math.PI / 4) * enemy.speed;
+                        enemy.y += Math.sin(angle + Math.PI / 4) * enemy.speed;
                     }
                 });
             }
 
-            if(player.health <= 0) {
+            if (player.health <= 0) {
                 cancelAnimationFrame(animationFrame);
                 gameOverDiv.style.display = 'block';
                 backgroundMusic.pause();
                 updateRecords();
+            } else if (killCount >= 800) {
+                cancelAnimationFrame(animationFrame);
+                alert('Победа! Вы убили 800 врагов!');
+                backToMenu();
             } else {
                 animationFrame = requestAnimationFrame(gameLoop);
             }
@@ -949,20 +944,20 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            if(isPaused) return; // Не позволяем стрелять во время паузы
+            if (isPaused) return;
 
-            switch(e.code) {
+            switch (e.code) {
                 case 'KeyW': keys.w = true; break;
                 case 'KeyA': keys.a = true; break;
                 case 'KeyS': keys.s = true; break;
                 case 'KeyD': keys.d = true; break;
-                case 'Space': 
-                    if(player?.ammo > 0) {
-                        if(tripleShotActive) {
-                            for(let i = -1; i <= 1; i++) {
+                case 'Space':
+                    if (player?.ammo > 0) {
+                        if (tripleShotActive) {
+                            for (let i = -1; i <= 1; i++) {
                                 bullets.push({
-                                    x: player.x + player.size/2,
-                                    y: player.y + player.size/2,
+                                    x: player.x + player.size / 2,
+                                    y: player.y + player.size / 2,
                                     speedX: Math.cos(player.angle + i * 0.2) * 10,
                                     speedY: Math.sin(player.angle + i * 0.2) * 10,
                                     size: 5
@@ -971,8 +966,8 @@
                             player.ammo--;
                         } else {
                             bullets.push({
-                                x: player.x + player.size/2,
-                                y: player.y + player.size/2,
+                                x: player.x + player.size / 2,
+                                y: player.y + player.size / 2,
                                 speedX: Math.cos(player.angle) * 10,
                                 speedY: Math.sin(player.angle) * 10,
                                 size: 5
@@ -980,6 +975,7 @@
                             player.ammo--;
                         }
                         ammoSpan.textContent = player.ammo;
+                        activateSuperShot(); // Активируем суперспособность при выстреле
                     }
                     break;
                 case 'KeyE': handlePickup(); break;
@@ -1004,7 +1000,7 @@
         });
 
         canvas.addEventListener('click', () => {
-            if(isPaused) return; // Не позволяем стрелять во время паузы
+            if(isPaused) return;
 
             if(player?.ammo > 0) {
                 if(tripleShotActive) {
@@ -1029,6 +1025,7 @@
                     player.ammo--;
                 }
                 ammoSpan.textContent = player.ammo;
+                activateSuperShot(); // Активируем суперспособность при выстреле
             }
         });
 
